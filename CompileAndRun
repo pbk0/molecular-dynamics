@@ -1,0 +1,255 @@
+################################################################################
+#
+# Author: Praveen Baburao Kulkarni praveen@spikingneurons.com
+#
+################################################################################
+#
+# Compile and run script for project
+#
+################################################################################
+
+# [mode=1] execute code for main method 
+# [mode=2] measure time taken by different kernels for different block sizes and memory transfer overhead
+# [mode=3] measure time taken by different kernels for different register memory usage
+# [mode=9] profiling
+mode=3
+
+# clean
+cd /root/NVIDIA_GPU_Computing_SDK/C/bin/linux/release
+rm -f MD_main_v7_0
+rm -f MD_testkernel_v7_0
+rm -f MD_forprofiler_v7_0
+rm -f MD_minblockpersmusage_v7_0
+cd /root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/obj/x86_64/release
+rm -f MD_main_v7_0.cu.o
+rm -f MD_testkernel_v7_0.cu.o
+rm -f MD_forprofiler_v7_0.cu.o
+rm -f MD_minblockpersmusage_v7_0.cu.o
+
+if [ $mode -eq 1 ]
+then
+    # configure parameters
+    cudacode=1
+    fermicode=1
+    blockSize=32
+    numberOfMolecules=100
+    step_num=10
+    
+    # compile the files
+    cd /root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD
+    makefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/Makefile"
+    sed s/"MD__v7_0"/"MD_main_v7_0"/1 $makefile > temp.$$
+    mv temp.$$ $makefile
+    definefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/MD_define_v7_0.h"
+    sed s/"define MAINCODE 0"/"define MAINCODE 1"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define CUDA_CODE"/"define CUDA_CODE $cudacode"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define FERMI_CODE"/"define FERMI_CODE $fermicode"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_BLOCKSIZE"/"define ENTERED_BLOCKSIZE $blockSize"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NP"/"define ENTERED_NP $numberOfMolecules"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NUMOFSTEPS"/"define ENTERED_NUMOFSTEPS $step_num"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    make
+    sed s/"define ENTERED_BLOCKSIZE $blockSize"/"define ENTERED_BLOCKSIZE"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NP $numberOfMolecules"/"define ENTERED_NP"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NUMOFSTEPS $step_num"/"define ENTERED_NUMOFSTEPS"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define FERMI_CODE $fermicode"/"define FERMI_CODE"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define CUDA_CODE $cudacode"/"define CUDA_CODE"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define MAINCODE 1"/"define MAINCODE 0"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"MD_main_v7_0"/"MD__v7_0"/1 $makefile > temp.$$
+    mv temp.$$ $makefile
+    
+    # launch the code
+    cd /root/NVIDIA_GPU_Computing_SDK/C/bin/linux/release
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> MAIN'
+    echo '[CUDA CODE ENABLED = '$cudacode']'
+    echo '[FERMI CODE ENABLED = '$fermicode']'
+    echo '[ENTERED BLOCK SIZE = '$blockSize']'
+    echo '[ENTERED NUMBER OF MOLECULES = '$numberOfMolecules']'
+    echo '[ENTERED NUMBER OF STEPS = '$step_num']'
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+    ./MD_main_v7_0
+fi
+
+if [ $mode -eq 2 ]
+then
+    # configure parameters
+    numberOfMolecules=100
+    iterations=10
+    
+    # compile the files
+    cd /root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD
+    makefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/Makefile"
+    sed s/"MD__v7_0"/"MD_testkernel_v7_0"/1 $makefile > temp.$$
+    mv temp.$$ $makefile
+    definefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/MD_define_v7_0.h"
+    sed s/"define TESTING_KERNEL 0"/"define TESTING_KERNEL 1"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_ITERATIONS"/"define ENTERED_ITERATIONS $iterations"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NP"/"define ENTERED_NP $numberOfMolecules"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    make
+    sed s/"define ENTERED_ITERATIONS $iterations"/"define ENTERED_ITERATIONS"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NP $numberOfMolecules"/"define ENTERED_NP"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define TESTING_KERNEL 1"/"define TESTING_KERNEL 0"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"MD_testkernel_v7_0"/"MD__v7_0"/1 $makefile > temp.$$
+    mv temp.$$ $makefile
+    
+    # launch the code
+    cd /root/NVIDIA_GPU_Computing_SDK/C/bin/linux/release
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TEST'
+    echo '[ENTERED NUMBER OF MOLECULES = '$numberOfMolecules']'
+    echo '[ENTERED NUMBER OF ITERATIONS = '$iterations']'
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+    ./MD_testkernel_v7_0
+fi
+
+
+if [ $mode -eq 3 ]
+then
+    # configure parameters
+    launchboundmaxthreads=16
+    launchboundminblocks=1
+    numberOfMolecules=10000
+    iterations=1000
+    
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TEST'
+    echo '[ENTERED NUMBER OF MOLECULES = '$numberOfMolecules']'
+    echo '[ENTERED NUMBER OF ITERATIONS = '$iterations']'
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+    echo ''
+    echo ''
+    
+    # loop program
+    while [ $launchboundmaxthreads -le 512 ]
+    do
+    
+        while [ $launchboundminblocks -le 8 ]
+        do
+        
+            # clean
+            cd /root/NVIDIA_GPU_Computing_SDK/C/bin/linux/release
+            rm -f MD_minblockpersmusage_v7_0
+            cd /root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/obj/x86_64/release
+            rm -f MD_minblockpersmusage_v7_0.cu.o
+        
+            # compile the files
+            cd /root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD
+            makefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/Makefile"
+            sed s/"MD__v7_0"/"MD_minblockpersmusage_v7_0"/1 $makefile > temp.$$
+            mv temp.$$ $makefile
+            definefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/MD_define_v7_0.h"
+            sed s/"define TESTING_BLOCKPERSMUSAGE 0"/"define TESTING_BLOCKPERSMUSAGE 1"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define LAUNCHBOUND_MAXTHREADS"/"define LAUNCHBOUND_MAXTHREADS $launchboundmaxthreads"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define LAUNCHBOUND_MINBLOCKS"/"define LAUNCHBOUND_MINBLOCKS $launchboundminblocks"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define ENTERED_NP1"/"define ENTERED_NP1 $numberOfMolecules"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define ENTERED_ITERATIONS1"/"define ENTERED_ITERATIONS1 $iterations"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            make 
+            sed s/"define LAUNCHBOUND_MAXTHREADS $launchboundmaxthreads"/"define LAUNCHBOUND_MAXTHREADS"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define LAUNCHBOUND_MINBLOCKS $launchboundminblocks"/"define LAUNCHBOUND_MINBLOCKS"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define ENTERED_ITERATIONS1 $iterations"/"define ENTERED_ITERATIONS1"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define ENTERED_NP1 $numberOfMolecules"/"define ENTERED_NP1"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"define TESTING_BLOCKPERSMUSAGE 1"/"define TESTING_BLOCKPERSMUSAGE 0"/1 $definefile > temp.$$
+            mv temp.$$ $definefile
+            sed s/"MD_minblockpersmusage_v7_0"/"MD__v7_0"/1 $makefile > temp.$$
+            mv temp.$$ $makefile
+            
+            # launch the code
+            cd /root/NVIDIA_GPU_Computing_SDK/C/bin/linux/release
+            ./MD_minblockpersmusage_v7_0
+            
+            launchboundminblocks=$(( $launchboundminblocks + 1))
+        
+        done
+        launchboundminblocks=1
+        launchboundmaxthreads=$(( $launchboundmaxthreads + 16))
+    
+    done 
+fi
+
+
+if [ $mode -eq 9 ]
+then
+    # configure parameters
+    blockSize=32
+    numberOfMolecules=10000
+    
+    # compile the files
+    cd /root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD
+    makefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/Makefile"
+    sed s/"MD__v7_0"/"MD_forprofiler_v7_0"/1 $makefile > temp.$$
+    mv temp.$$ $makefile
+    definefile="/root/NVIDIA_GPU_Computing_SDK/C/src/praveen_MD/MD_define_v7_0.h"
+    sed s/"define PROFILING 0"/"define PROFILING 1"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_BLOCKSIZE"/"define ENTERED_BLOCKSIZE $blockSize"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NP"/"define ENTERED_NP $numberOfMolecules"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    make
+    sed s/"define ENTERED_BLOCKSIZE $blockSize"/"define ENTERED_BLOCKSIZE"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define ENTERED_NP $numberOfMolecules"/"define ENTERED_NP"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"define PROFILING 1"/"define PROFILING 0"/1 $definefile > temp.$$
+    mv temp.$$ $definefile
+    sed s/"MD_forprofiler_v7_0"/"MD__v7_0"/1 $makefile > temp.$$
+    mv temp.$$ $makefile
+    
+    # launch the code
+    cd /root/NVIDIA_GPU_Computing_SDK/C/bin/linux/release
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> PROFILER'
+    echo '[ENTERED BLOCK SIZE = '$blockSize']'
+    echo '[ENTERED NUMBER OF MOLECULES = '$numberOfMolecules']'
+    echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+    ./MD_forprofiler_v7_0
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#rm -f runme
+#nvcc --compiler-options -Wall,-fPIC -arch sm_13 -o runme MD_main_v7_0.cu -lm 
+#./runme
+
+
+#rm -f runme
+#nvcc --compiler-options -Wall,-fPIC -arch sm_13 -o runme MD_testkernel_v7_0.cu -lm 
+#./runme 
+
